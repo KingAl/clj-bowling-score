@@ -17,3 +17,11 @@
     (is (= (raw-bowls [[2 3] [:strike :skip]]) [2 3 10]))
     (is (= (raw-bowls [[1 :spare]]) [1 9]))
 ))
+
+(deftest calc-score-test
+  (testing "Calculating total score from a scorecard"
+    (is (= (calculate-score [[1 2]]) 3))
+    (is (= (calculate-score [[2 3] [4 5]]) 14))
+    (is (= (calculate-score [[2 3] [:strike :skip] [2 2]]) 23))
+    (is (= (calculate-score [[1 :spare] [2 2]]) 16))
+))

@@ -27,20 +27,37 @@
                    [])
   ))
 
-(defn valid-played-frame? [frame & {:keys [bonus?] :or {bonus? false}}]
-  (let [[ball1 ball2 & extras] frame
-        pending (cond 
-                  (and (every? #(and (number? %) (< % max-pins)) [ball1 ball2])
-                    (< (+ ball1 ball2) max-pins))  0
-                  (= [:strike :skip] [ball1 ball2]) 2
-                  (and (number? ball1) (< ball1 max-pins) (= :spare ball2)) 1
-             :else false)]
-       (if bonus?
-           (and (= (count extras) pending)
-                (every? #(or (number? %) (#{:strike :spare} %)) extras)
+(defn empty-frame? [frame]
+  (and (= (count frame) 2) (every? #{:skip} frame)))
 
-                ; we don't really check here for valid scores, just decipherable ones
-                (try (= (count (raw-bowls (vec extras))) pending) (catch Exception e false)))
+(defn played-pair?
+  "Takes initial 2 scores in a frame, if playable returns number of pending
+   rolls required to calculate the frame score"
+  [frame-pair]
+  (let [[b1 b2] frame-pair
+        pending (cond
+                  (and (every? #(and (number? %) (< % max-pins)) [b1 b2])
+                    (< (+ b1 b2) max-pins))  0
+                  (= [:strike :skip] [b1 b2]) 2
+                  (and (number? b1) (< b1 max-pins) (= :spare b2)) 1
+             :else false)]
+    pending))
+
+(defn valid-bonus? [bonus pending]
+  (let [[b1 b2] bonus]
+    (and (= (count bonus) pending)
+      (case pending
+            0 true
+            1 (or (= b1 :strike) (and (number? b1) (< b1 max-pins)))
+            2 (or (and (every? number? bonus) (< (+ b1 b2) max-pins))
+                  (every? #{:strike} bonus)
+                  (and (number? b1) (< b1 max-pins) (= :spare b2)))))))
+
+(defn valid-played-frame? [frame & {:keys [bonus?] :or {bonus? false}}]
+  (let [[b1 b2 & extras] frame
+        pending (played-pair? [b1 b2])]
+       (if bonus?
+           (valid-bonus? extras pending)
            (and (= (count extras) 0) pending))
   ))
 

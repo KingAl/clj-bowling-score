@@ -48,8 +48,8 @@
                                    (every? valid-played-frame? (take (- max-turns 1) scorecard))
                                    (valid-played-frame? (last scorecard) :bonus true)))
 
-(defn calculate-score [scorecard]
-  (loop [frames scorecard, total 0]
+(defn calculate-score [scorecard & {:keys [reducef reducev] :or {reducef + reducev 0}}]
+  (loop [frames scorecard, total reducev]
     (if (not-empty frames) 
           (let [[b1 b2 :as frame] (first frames)
             context (raw-bowls frames)
@@ -58,11 +58,16 @@
                            (= [b1 b2] [:strike :skip]) (take 3 context)
                            (and (number? b1) (= :spare b2)) (take 3 context))
             sum (apply + frame-scores)]
-            (recur (subvec frames 1) (+ total sum)))
+            (recur (subvec frames 1) (reducef total sum)))
          total)))
-         
-        
 
+(defn per-frame-score [scorecard]
+  (calculate-score scorecard :reducef conj :reducev []))
+
+(defn cumul-score [scorecard]
+  (reductions + (per-frame-score scorecard)))
+
+        
 (defn -main
   "Runs the bowling score input loop."
   [& args]

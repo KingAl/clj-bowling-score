@@ -63,7 +63,7 @@
 
 (defn finished-card? [scorecard] (and (= (count scorecard) max-turns)
                                    (every? valid-played-frame? (take (- max-turns 1) scorecard))
-                                   (valid-played-frame? (last scorecard) :bonus true)))
+                                   (valid-played-frame? (last scorecard) :bonus? true)))
 
 (defn calculate-score [scorecard & {:keys [reducef reducev] :or {reducef + reducev 0}}]
   (loop [frames scorecard, total reducev]

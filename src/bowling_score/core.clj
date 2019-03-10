@@ -17,7 +17,7 @@
 (defn raw-bowls 
   "Converts a scorecard into a sequence of raw pins-hit that make it up."
   [scorecard]
-  (assert (vector? scorecard)) ; for expected conj, peek behaviour
+  (assert (vector? scorecard)) ; for expected end-item conj, peek behaviour
   (->> scorecard flatten 
                   (filter #(not (= :skip %))) 
                   (reduce (fn [coll val] 
@@ -31,7 +31,7 @@
   (and (= (count frame) 2) (every? #{:skip} frame)))
 
 (defn played-pair?
-  "Takes initial 2 scores in a frame, if playable returns number of pending
+  "Takes initial 2 scores in a frame, if legal returns number of pending
    rolls required to calculate the frame score"
   [frame-pair]
   (let [[b1 b2] frame-pair
@@ -61,9 +61,23 @@
            (and (= (count extras) 0) pending))
   ))
 
+
 (defn finished-card? [scorecard] (and (= (count scorecard) max-turns)
                                    (every? valid-played-frame? (take (- max-turns 1) scorecard))
                                    (valid-played-frame? (last scorecard) :bonus? true)))
+
+(defn valid-card? 
+  "Returns truthy if card is in legal state, :finished if game done, :incomplete if
+  more frames are needed to make the score unambiguous."
+  [scorecard]
+  (if (empty-frame? (last scorecard))
+    (let [played (take-while valid-played-frame? scorecard)
+           pending-rolls (if (not-empty played) (valid-played-frame? (last played)) 0)
+           unplayed (take-while empty-frame? (drop (count played) scorecard))]
+         (and (= max-turns (+ (count played) (count unplayed)))
+              (or (= pending-rolls 0) :incomplete)))
+    (and (finished-card? scorecard) :finished)))
+
 
 (defn calculate-score [scorecard & {:keys [reducef reducev] :or {reducef + reducev 0}}]
   (loop [frames scorecard, total reducev]

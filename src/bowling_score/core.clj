@@ -11,7 +11,7 @@
 
 (defn pretty-bowl [bowl] (case bowl :strike \X, :spare \/, :skip \-, bowl))
 (defn pretty-card [scorecard] (->> scorecard (clojure.walk/postwalk pretty-bowl) 
-                                     (map #(string/join ", " %)) (string/join " | ")))
+                                     (map #(string/join ", " %)) (string/join " | ") (format " %s ")))
 
 
 (defn raw-bowls 
@@ -51,6 +51,7 @@
             1 (or (= b1 :strike) (and (number? b1) (< b1 max-pins)))
             2 (or (and (every? number? bonus) (< (+ b1 b2) max-pins))
                   (every? #{:strike} bonus)
+                  (and (= b1 :strike) (number? b2) (< b2 max-pins))
                   (and (number? b1) (< b1 max-pins) (= :spare b2)))))))
 
 (defn valid-played-frame? [frame & {:keys [bonus?] :or {bonus? false}}]

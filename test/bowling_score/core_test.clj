@@ -4,10 +4,10 @@
 
 (deftest print-score-test
   (testing "Basic score display test"
-    (is (= (pretty-card [[1 2]]) "1, 2"))
-    (is (= (pretty-card [[2 3] [4 5]]) "2, 3 | 4, 5"))
-    (is (= (pretty-card [[2 3] [:strike :skip]]) "2, 3 | X, -"))
-    (is (= (pretty-card [[1 :spare]]) "1, /"))
+    (is (= (pretty-card [[1 2]]) " 1, 2 "))
+    (is (= (pretty-card [[2 3] [4 5]]) " 2, 3 | 4, 5 "))
+    (is (= (pretty-card [[2 3] [:strike :skip]]) " 2, 3 | X, - "))
+    (is (= (pretty-card [[1 :spare]]) " 1, / "))
 ))
 
 (deftest raw-bowls-test
@@ -51,7 +51,5 @@
     (is (= false (valid-bonus? [1] 0)))
     (is (= false (valid-bonus? [1] 2)))
     (is (= false (valid-bonus? [9 9] 2)))
-    (is (= false (valid-bonus? [:strike :spare] 2)))
-    (is (= false (valid-bonus? [:strike 9] 2)))
     (is (= false (valid-bonus? [:strike :spare] 2)))
 ))

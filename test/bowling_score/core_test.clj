@@ -25,3 +25,33 @@
     (is (= (calculate-score [[2 3] [:strike :skip] [2 2]]) 23))
     (is (= (calculate-score [[1 :spare] [2 2]]) 16))
 ))
+
+(deftest valid-frame-pair-check
+  (testing "Checking scores for non-bonus rolls are legal"
+    (is (played-pair? [1 2]))
+    (is (played-pair? [:strike :skip]))
+    (is (played-pair? [9 :spare]))
+    (is (= false (played-pair? [10 :spare])))
+    (is (= false (played-pair? [:spare 1])))
+    (is (= false (played-pair? [9 9])))
+    (is (= false (played-pair? [:strike :strike])))
+    (is (= false (played-pair? [:strike 9])))
+    (is (= false (played-pair? [:strike :spare])))
+))
+
+(deftest valid-bonus-check
+  (testing "Checking scores for bonus rolls are legal"
+    (is (valid-bonus? [] 0))
+    (is (valid-bonus? [1] 1))
+    (is (valid-bonus? [7 2] 2))
+    (is (valid-bonus? [7 :spare] 2))
+    (is (valid-bonus? [:strike :strike] 2))
+    (is (valid-bonus? [:strike 9] 2))
+    (is (valid-bonus? [9 :spare] 2))
+    (is (= false (valid-bonus? [1] 0)))
+    (is (= false (valid-bonus? [1] 2)))
+    (is (= false (valid-bonus? [9 9] 2)))
+    (is (= false (valid-bonus? [:strike :spare] 2)))
+    (is (= false (valid-bonus? [:strike 9] 2)))
+    (is (= false (valid-bonus? [:strike :spare] 2)))
+))

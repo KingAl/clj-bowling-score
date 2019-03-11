@@ -173,7 +173,7 @@
             (recur 1 [])))
         (do
           (let [b (read-roll (format "Bonus ball %d: " round))
-                b-pretty (cond (and (peek scores) (= (+ (peek scores) b) max-pins)) :spare
+                b-pretty (cond (and (number? (peek scores)) (= (+ (peek scores) b) max-pins)) :spare
                                (= max-pins b) :strike
                                :else b)]
             (recur (inc round) (conj scores b-pretty)))))))

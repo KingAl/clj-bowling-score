@@ -12,6 +12,7 @@
 (defn pretty-bowl [bowl] (case bowl :strike \X, :spare \/, :skip \-, bowl))
 (defn pretty-card [scorecard] (->> scorecard (clojure.walk/postwalk pretty-bowl) 
                                      (map #(string/join ", " %)) (string/join " | ") (format " %s ")))
+(defn pretty-score [frame-scores] (string/join "|" (map #(format "  %-4s" %) frame-scores)))
 
 
 (defn raw-bowls 
@@ -99,7 +100,11 @@
 (defn cumul-score [scorecard]
   (reductions + (per-frame-score scorecard)))
 
-        
+(defn score-game [scorecard]
+  (if (finished-card? scorecard)
+    (calculate-score scorecard)
+    :unfinished))
+
 (defn -main
   "Runs the bowling score input loop."
   [& args]

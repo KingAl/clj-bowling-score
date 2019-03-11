@@ -82,13 +82,13 @@
     (and (finished-card? scorecard) :finished)))
 
 
-(defn calculate-score 
-  "Calculates per-frame score of scorecard, by default reduces result by summing.
-  Optionally a) takes different reducing functions,
-             b) considers non-numerical frame-states :skip and :incomplete,
-             which can be summed by alternative reducing functions like score+propagate"
-  [scorecard & {:keys [reducef reducev numeric?] :or {reducef + reducev 0 numeric? true}}]
-  (loop [frames scorecard, total reducev]
+(defn calculate-frame-scores
+  "Returns list of scores for each frame in a scorecard.
+  Optionally considers non-numerical frame-states :skip and :incomplete,
+  for unplayed frames, and frames requiring additional rolls to calculate final score.
+  These default to zero, and sum of partial score, respectively."
+  [scorecard & {:keys [numeric?] :or {numeric? true}}]
+  (loop [frames scorecard, total []]
     (if (not-empty frames) 
           (let [[b1 b2 :as frame] (first frames)
                 context (raw-bowls frames)
@@ -101,8 +101,10 @@
                  sum (cond (= score# (count frame-scores)) (apply + frame-scores)
                            (nil? score#) (if numeric? 0 :skip)
                            (> score# (count frame-scores)) (if numeric? (apply + frame-scores) :incomplete))]
-            (recur (subvec frames 1) (reducef total sum)))
+            (recur (subvec frames 1) (conj total sum)))
          total)))
+
+(defn calculate-score [scorecard] (apply + (calculate-frame-scores scorecard)))
 
 (defn score+propagate [l r]
   "Score addition function which propagates last played frame to the end.
@@ -123,11 +125,8 @@
         (= :skip r) :skip
         (= :incomplete r) r))
 
-(defn per-frame-score [scorecard]
-  (calculate-score scorecard :reducef conj :reducev [] :numeric? false))
-
 (defn cumul-score [scorecard]
-  (reductions score+noprop (per-frame-score scorecard)))
+  (reductions score+noprop (calculate-frame-scores scorecard :numeric? false)))
 
 (defn score-game [scorecard]
   (if (finished-card? scorecard)

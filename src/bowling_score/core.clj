@@ -105,7 +105,64 @@
     (calculate-score scorecard)
     :unfinished))
 
+(defn read-roll [prompt]
+  (print prompt)
+  (flush)
+  (let [result 
+          (try
+            (let [b (Integer/parseInt (read-line))]
+              (if (< 0 b (inc max-pins))
+                b
+                (do (println (format "Invalid roll, must be between 1 and %d." max-pins))
+                 nil)))
+           (catch NumberFormatException e (do (println "Invalid input, try again.") nil)))]
+     (if (not result)
+       (recur prompt)
+       result)))
+
+
+(defn play-round [round]
+  (println "Round " round)
+  (flush)
+  (let [frame (let [b1 (read-roll "Ball 1: ")]
+                (if (= b1 max-pins)
+                  [:strike :skip]
+                  (let [b2 (read-roll "Ball 2: ")]
+                    (if (= (+ b1 b2) max-pins)
+                      [b1 :spare]
+                      [b1 b2]))))]
+    (if (valid-played-frame? frame)
+      frame
+      (do (println "Invalid rolls, retrying.")
+          (recur round)))))
+
+(defn play-bonus [pending]
+  (loop [round 1 scores []]
+    (if (> round pending)
+        (if (valid-bonus? scores pending)
+          scores
+          (do (println "Invalid bonus rolls, retrying.")
+            (recur 1 [])))
+        (do
+          (let [b (read-roll (format "Bonus ball %d: " round))
+                b-pretty (cond (= max-pins b) :strike
+                               (and (peek scores) (= (+ (peek scores) b) max-pins)) :spare
+                               :else b)]
+            (recur (inc round) (conj scores b-pretty)))))))
+
 (defn -main
   "Runs the bowling score input loop."
   [& args]
-  (println (pretty-card test-scorecard)))
+  (loop [index 0 scorecard blank-scorecard]
+    (println (pretty-card scorecard))
+    (if (and (= index max-turns) (finished-card? scorecard))
+      (println "Final score: " (calculate-score scorecard))
+      (let [round (inc index)
+            frame (play-round round)
+            pending (valid-played-frame? frame)]
+            (if (= round max-turns)
+              (let [bonus (play-bonus pending)]
+                (recur (inc index) (assoc scorecard index (into [] (concat frame bonus)))))
+                (recur (inc index) (assoc scorecard index frame)))
+       ))))
+

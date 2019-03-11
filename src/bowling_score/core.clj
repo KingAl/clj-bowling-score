@@ -12,7 +12,8 @@
 (defn pretty-bowl [bowl] (case bowl :strike \X, :spare \/, :skip \-, bowl))
 (defn pretty-card [scorecard] (->> scorecard (clojure.walk/postwalk pretty-bowl) 
                                      (map #(string/join ", " %)) (string/join " | ") (format " %s ")))
-(defn pretty-score [frame-scores] (string/join "|" (map #(format "  %-4s" %) frame-scores)))
+(defn pretty-score [score] (case score :incomplete \?, :skip \-, score))
+(defn pretty-scorelist [frame-scores] (string/join "|" (map #(format "  %-4s" (pretty-score %)) frame-scores)))
 
 
 (defn raw-bowls 
@@ -81,24 +82,52 @@
     (and (finished-card? scorecard) :finished)))
 
 
-(defn calculate-score [scorecard & {:keys [reducef reducev] :or {reducef + reducev 0}}]
+(defn calculate-score 
+  "Calculates per-frame score of scorecard, by default reduces result by summing.
+  Optionally a) takes different reducing functions,
+             b) considers non-numerical frame-states :skip and :incomplete,
+             which can be summed by alternative reducing functions like score+propagate"
+  [scorecard & {:keys [reducef reducev numeric?] :or {reducef + reducev 0 numeric? true}}]
   (loop [frames scorecard, total reducev]
     (if (not-empty frames) 
           (let [[b1 b2 :as frame] (first frames)
-            context (raw-bowls frames)
-            frame-scores (cond
-                           (every? number? [b1 b2]) (take 2 context)
-                           (= [b1 b2] [:strike :skip]) (take 3 context)
-                           (and (number? b1) (= :spare b2)) (take 3 context))
-            sum (apply + frame-scores)]
+                context (raw-bowls frames)
+                score# (cond
+                               (every? number? [b1 b2])         2
+                               (= [b1 b2] [:strike :skip])      3
+                               (and (number? b1) (= :spare b2)) 3
+                               (every? #{:skip} [b1 b2]) nil)
+                 frame-scores (or (and (nil? score#) []) (take score# context))
+                 sum (cond (= score# (count frame-scores)) (apply + frame-scores)
+                           (nil? score#) (if numeric? 0 :skip)
+                           (> score# (count frame-scores)) (if numeric? (apply + frame-scores) :incomplete))]
             (recur (subvec frames 1) (reducef total sum)))
          total)))
 
+(defn score+propagate [l r]
+  "Score addition function which propagates last played frame to the end.
+   Ignores skips returning last seen good value. Useful for numeric sum
+   of scores where we care about the score-so-far."
+  (let [result (cond (every? number? [l r]) (+ l r)
+        (= :skip r) l
+        (= :incomplete r) r)]
+    (println l r result)
+    result))
+
+(defn score+noprop [l r]
+  "Score addition function which does not propagate last played frame.
+   Useful for display of per-frame cumulative score, where we want
+   to display running totals up to the last played frame, then
+   :skip to recognise unplayed frames."
+  (cond (every? number? [l r]) (+ l r)
+        (= :skip r) :skip
+        (= :incomplete r) r))
+
 (defn per-frame-score [scorecard]
-  (calculate-score scorecard :reducef conj :reducev []))
+  (calculate-score scorecard :reducef conj :reducev [] :numeric? false))
 
 (defn cumul-score [scorecard]
-  (reductions + (per-frame-score scorecard)))
+  (reductions score+noprop (per-frame-score scorecard)))
 
 (defn score-game [scorecard]
   (if (finished-card? scorecard)
@@ -154,7 +183,10 @@
   "Runs the bowling score input loop."
   [& args]
   (loop [index 0 scorecard blank-scorecard]
-    (println (pretty-card scorecard))
+    (println)
+    (println "Scores: " (pretty-card scorecard))
+    (println "Totals: " (pretty-scorelist (cumul-score scorecard)))
+    (println)
     (if (and (= index max-turns) (finished-card? scorecard))
       (println "Final score: " (calculate-score scorecard))
       (let [round (inc index)
